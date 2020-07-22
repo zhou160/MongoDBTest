@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.0.0-alpha1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.0.0-alpha1/js/bootstrap.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        input{
+            display: none;
+        }
+        span{
+            display: inline-block;
+        }
+        .del{
+            display: inline-block;
+        }
+        .editor{
+            display: inline-block;
+        }
+        .ok{
+            display: none;
+        }
+        img{
+            display: inline-block;
+        }
+        .cancel{
+            display: none;
+        }
+        .test input{
+            display: inline-block;
+        }
+        .test span{
+            display: none;
+        }
+        .test .editor{
+            display: none;
+        }
+        .test .del{
+            display: none;
+        }
+        .test .ok{
+            display: inline-block;
+        }
+        .test .cancel{
+            display: inline-block;
+        }
+        .test img{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <table class="table table-hover" data-id="1">
+            <thead>
+                <tr>
+                    <th>商品ID</th>
+                    <th>商品图片</th>
+                    <th>商品名称</th>
+                    <th>商品数量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+               
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(()=>{
+            baseURL = "http://localhost:3000";
+            let html = '';
+            $.ajax({
+                url:baseURL + '/api/shop',
+                method:'GET',
+                success:(res)=>{
+                    // console.log(res);
+                    res.forEach(item=>{
+                        html +=`
+                        <tr>
+                    <td scope="row">${item.shopID}</td>
+                    <td>
+                        <img src="${item.shopImg}" width=100 height=100>
+                        <input type="file" class="shopImg">
+                    </td>
+                    <td>
+                        <span>${item.shopName}</span>
+                        <input type="text">
+                    </td>
+                    <td>
+                        <span>${item.shopNumber}</span>
+                        <input type="text">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary btn-sg btn-success editor" data-id="${item._id}" >编辑</button>
+                        <button type="button" class="btn btn-primary btn-sg btn-danger del" data-id="${item._id}" >删除</button>
+                        <button type="button" class="btn btn-primary btn-sg btn-success ok" data-id="${item._id}" >确定</button>
+                        <button type="button" class="btn btn-primary btn-sg btn-danger cancel" data-id="${item._id}" >取消</button>
+                    </td>
+                </tr>
+                        `
+                    });
+                    $('tbody').html(html);
+                }
+            });
+            
+        });
+        let imgInfo = {};
+        $('tbody').on('click','button',function(){
+            //编辑
+            if($(this).hasClass('editor')){
+                $(this).parents('tr').addClass('test');
+                let spans = $(this).parents('tr').find('span');
+                for(let i=0;i<spans.length;i++){
+                    // console.log($(spans[i]).next())
+                    $(spans[i]).next().val($(spans[i]).html())
+                }
+            }
+
+            $('.shopImg').change(function(e){
+                imgInfo = e.target.files[0];
+            });
+
+            //删除
+            if($(this).hasClass('del')){
+                let root = $('table').attr('data-id');
+                let id = $(this).attr('data-id');
+                switch(root){
+                    case '0':
+                        alert('您没有权限删除');
+                        break;
+                    case '1':
+                        del(id);
+                        $(this).parents('tr').remove();
+                        break;
+                    case '2':
+                        del(id);
+                        $(this).parents('tr').remove();
+                        break;
+                    
+                    
+                }
+            }
+
+            //确定
+            if($(this).hasClass('ok')){
+                $(this).parents('tr').removeClass('test');
+                let spans = $(this).parents('tr').find('span');
+                for(let i=0;i<spans.length;i++){
+                    $(spans[i]).html($(spans[i]).next().val())
+                    console.log($(spans[i]).next().val())
+                }
+                // update(_id,shopName,shopNumber);
+                //如果这里没有上传图片该如何处理？input没有触发onchange事件，如果图片没有重新上传该如何
+                //可以如果触发就向后边传递参数，然后在后端进行判断是否传递
+                let data = {
+                    _id:$(this).attr('data-id'),
+                    shopName:$(this).parents('tr').find('input').eq(1).val(),
+                    shopNumber:$(this).parents('tr').find('input').eq(2).val(),
+                }
+                data.shopImg = imgInfo;
+                console.log(data.shopImg);
+                let params = new FormData();
+                for(let key in data){
+                    params.append(key,data[key]);
+                    console.log(data[key])
+                }
+                update(params);
+            }
+
+            //取消
+            if($(this).hasClass('cancel')){
+                $(this).parents('tr').removeClass('test');
+            }
+        });
+
+        let baseURL = 'http://localhost:3000';
+        //删除功能
+        function del(id){
+            $.ajax({
+                url:baseURL + '/api/shop',
+                method:'delete',
+                data:{
+                    _id:id
+                },
+                success:function(res){
+                    console.log(res);
+                }
+            })
+        }
+
+        //修改功能
+        function update(params){
+            console.log('修改');
+            $.ajax({
+                url:baseURL + '/api/shop',
+                method:'put',
+                data:params,
+                processData:false,
+                contentType:false,
+                success:function(res){
+                    console.log(res);
+                }
+            })
+        }
+
+    </script>
+</body>
+</html>
